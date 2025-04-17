@@ -1,0 +1,2 @@
+Predecessor TID,	Predecessor JID,	Successor TID, Successor JID,     Min Delay, Max Delay,    Type
+1, 1,    1, 1,    0, 5,    s-s
