@@ -142,7 +142,6 @@ pub fn parse_problem(
 
 #[cfg(test)]
 mod tests {
-	use crate::problem::*;
 	use super::*;
 
 	#[test]
