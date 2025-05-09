@@ -1,5 +1,6 @@
 mod bounds;
 mod cli;
+mod index_set;
 mod parser;
 mod permutation;
 mod problem;
