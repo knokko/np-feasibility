@@ -7,7 +7,7 @@ mod problem;
 use clap::Parser;
 use cli::Args;
 use parser::parse_problem;
-use crate::bounds::strengthen_bounds_using_constraints;
+use crate::bounds::*;
 use crate::permutation::ProblemPermutation;
 
 fn main() {
@@ -20,6 +20,7 @@ fn main() {
 	let maybe_permutation = ProblemPermutation::possible(&mut problem);
 	if let Some(permutation) = maybe_permutation {
 		strengthen_bounds_using_constraints(&mut problem);
+		strengthen_bounds_using_core_occupation(&mut problem);
 		permutation.transform_back(&mut problem);
 		if problem.is_certainly_infeasible() {
 			println!("INFEASIBLE");

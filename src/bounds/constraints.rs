@@ -8,6 +8,9 @@ use crate::problem::*;
 ///
 /// Furthermore, for all start-to-start constraints `c`:
 /// - `problem.jobs[c.before].earliest_start + c.delay <= problem.jobs[c.after].earliest_start`
+///
+/// Returns true if and only if the `earliest_start` or `latest_start` of at least 1 job has
+/// been changed.
 pub fn strengthen_bounds_using_constraints(problem: &mut Problem) -> bool {
 	debug_assert!(problem.is_job_order_possible());
 
