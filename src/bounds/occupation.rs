@@ -199,12 +199,11 @@ impl OccupationTimeline {
 				job.earliest_start, interruption_bound
 			);
 			if let Some(interruption_index) = maybe_interruption_index {
+				debug_assert!(job.earliest_start < self.intervals[interruption_index + 1].start);
 				job.earliest_start = self.intervals[interruption_index + 1].start;
-				if old.get_earliest_finish() > old.latest_start {
-					job.earliest_start = min(job.earliest_start, old.latest_start);
-					if job.earliest_start == job.latest_start {
-						break;
-					}
+				if old.get_earliest_finish() > old.latest_start && job.earliest_start > old.latest_start {
+					job.earliest_start = old.latest_start;
+					break;
 				}
 			} else {
 				break;
@@ -216,12 +215,11 @@ impl OccupationTimeline {
 				max(job.latest_start, job.get_earliest_finish()), job.get_latest_finish()
 			);
 			if let Some(interruption_index) = maybe_interruption_index {
+				debug_assert!(job.get_latest_finish() > self.intervals[interruption_index].start);
 				job.set_latest_finish(self.intervals[interruption_index].start);
-				if old.get_earliest_finish() > old.latest_start {
-					job.set_latest_finish(max(job.get_latest_finish(), old.get_earliest_finish()));
-					if job.earliest_start == job.latest_start {
-						break;
-					}
+				if old.get_earliest_finish() > old.latest_start && job.get_latest_finish() < old.get_earliest_finish(){
+					job.set_latest_finish(old.get_earliest_finish());
+					break;
 				}
 			} else {
 				break;
@@ -264,6 +262,7 @@ impl OccupationTimeline {
 
 #[cfg(test)]
 mod tests {
+	use crate::parser::parse_problem;
 	use super::*;
 
 	#[test]
@@ -845,5 +844,13 @@ mod tests {
 		}
 
 		assert_eq!(RefineResult::Infeasible, timeline.refine(&mut problem.jobs[0]));
+	}
+
+	#[test]
+	fn test_hang_regression() {
+		let mut problem = parse_problem(
+			"./test-problems/infeasible/regression/hang1.csv", None, 2
+		);
+		strengthen_bounds_using_core_occupation(&mut problem);
 	}
 }
