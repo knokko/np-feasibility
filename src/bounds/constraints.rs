@@ -136,4 +136,15 @@ mod tests {
 
 		assert!(problem.is_certainly_infeasible());
 	}
+
+	#[test]
+	fn test_needs_only_one_iteration() {
+		let mut problem = parse_problem(
+			"./test-problems/infeasible/regression/panic3-cores3.csv",
+			Some("./test-problems/infeasible/regression/panic3.prec.csv"), 3
+		);
+		ProblemPermutation::possible(&mut problem).unwrap();
+		assert!(strengthen_bounds_using_constraints(&mut problem));
+		assert!(!strengthen_bounds_using_constraints(&mut problem));
+	}
 }

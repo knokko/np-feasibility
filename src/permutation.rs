@@ -1,5 +1,6 @@
 use crate::problem::*;
 
+#[derive(Debug)]
 struct JobBuilder {
 	job: usize,
 	num_successors: usize,
@@ -25,6 +26,34 @@ pub struct ProblemPermutation {
 
 impl ProblemPermutation {
 
+	fn sort_constraints(
+		problem: &Problem, builders: &mut [JobBuilder],
+		sorted_constraints: &mut [Constraint], constraint_permutation: &mut [usize]
+	) {
+		for constraint in &problem.constraints {
+			builders[constraint.get_before()].num_successors += 1;
+			builders[constraint.get_after()].remaining_predecessors += 1;
+		}
+
+		{
+			let mut offset = 0;
+			for builder in builders.iter_mut() {
+				let old_offset = offset;
+				offset += builder.num_successors;
+				builder.offset = old_offset;
+				builder.num_successors = 0;
+			}
+		}
+
+		for index in 0 .. problem.constraints.len() {
+			let constraint = problem.constraints[index];
+			let predecessor = &mut builders[constraint.get_before()];
+			sorted_constraints[predecessor.offset + predecessor.num_successors] = constraint;
+			constraint_permutation[index] = predecessor.offset + predecessor.num_successors;
+			predecessor.num_successors += 1;
+		}
+	}
+
 	/// This function creates a **possible** permutation of the jobs: the jobs will be sorted such
 	/// that they can be started in order, *without violating any constraints*. More formally,
 	/// after this function returns, it holds for any constraint `c` that `c.before < c.after`.
@@ -40,30 +69,8 @@ impl ProblemPermutation {
 		).collect();
 
 		let mut sorted_constraints = vec![Constraint::dummy(); problem.constraints.len()];
-
-		for constraint in &problem.constraints {
-			builders[constraint.get_before()].num_successors += 1;
-			builders[constraint.get_after()].remaining_predecessors += 1;
-		}
-
-		{
-			let mut offset = 0;
-			for builder in &mut builders {
-				let old_offset = offset;
-				offset += builder.num_successors;
-				builder.offset = old_offset;
-				builder.num_successors = 0;
-			}
-		}
-
 		let mut constraint_permutation = vec![0usize; problem.constraints.len()];
-		for index in 0 .. problem.constraints.len() {
-			let constraint = problem.constraints[index];
-			let predecessor = &mut builders[constraint.get_before()];
-			sorted_constraints[predecessor.offset + predecessor.num_successors] = constraint;
-			constraint_permutation[index] = predecessor.offset + predecessor.num_successors;
-			predecessor.num_successors += 1;
-		}
+		Self::sort_constraints(problem, &mut builders, &mut sorted_constraints, &mut constraint_permutation);
 
 		let mut completed_jobs: Vec<usize> = Vec::with_capacity(builders.len());
 		let mut next_jobs: Vec<usize> = Vec::with_capacity(builders.len());
@@ -81,7 +88,7 @@ impl ProblemPermutation {
 			for constraint in &sorted_constraints[start_index..bound_index] {
 				let successor = &mut builders[constraint.get_after()];
 				successor.remaining_predecessors -= 1;
-				assert!(successor.remaining_predecessors >= 0);
+				debug_assert!(successor.remaining_predecessors >= 0);
 
 				if successor.remaining_predecessors == 0 {
 					next_jobs.push(successor.job);
@@ -95,6 +102,12 @@ impl ProblemPermutation {
 			return None;
 		}
 
+		let mut reverse_jobs = next_jobs;
+		reverse_jobs.resize(completed_jobs.len(), 0);
+		for index in 0 .. completed_jobs.len() {
+			reverse_jobs[completed_jobs[index]] = index;
+		}
+
 		let mut new_jobs: Vec<Job> = Vec::with_capacity(completed_jobs.len());
 		for job_index in &completed_jobs {
 			new_jobs.push(problem.jobs[*job_index]);
@@ -102,16 +115,26 @@ impl ProblemPermutation {
 		problem.jobs = new_jobs;
 		problem.update_job_indices();
 
-		for index in 0 .. sorted_constraints.len() {
-			let old = sorted_constraints[index];
+		for index in 0 .. problem.constraints.len() {
+			let old = problem.constraints[index];
 			let new = Constraint::new(
-				completed_jobs[old.get_before()], completed_jobs[old.get_after()],
+				reverse_jobs[old.get_before()], reverse_jobs[old.get_after()],
 				old.get_delay(), old.get_type()
 			);
 			problem.constraints[index] = new;
+			debug_assert!(new.get_before() < new.get_after());
 		}
 
-		Some(ProblemPermutation { jobs: completed_jobs, constraints: constraint_permutation })
+		for builder in &mut builders {
+			builder.num_successors = 0;
+			builder.remaining_predecessors = 0;
+		}
+
+		Self::sort_constraints(problem, &mut builders, &mut sorted_constraints, &mut constraint_permutation);
+		problem.constraints = sorted_constraints;
+		debug_assert!(problem.constraints.is_sorted_by_key(|c| c.get_before()));
+
+		Some(ProblemPermutation { jobs: reverse_jobs, constraints: constraint_permutation })
 	}
 
 	/// Puts all jobs and precedence constraints back at their original position (index), and fixes
@@ -137,7 +160,7 @@ impl ProblemPermutation {
 			let original_constraint = Constraint::new(
 				original_before, original_after, current_constraint.get_delay(), current_constraint.get_type()
 			);
-			new_constraints[current_index] = original_constraint
+			new_constraints[original_index] = original_constraint
 		}
 		problem.constraints = new_constraints;
 	}
@@ -190,5 +213,19 @@ mod tests {
 
 		permutation.transform_back(&mut problem);
 		assert_eq!(problem, parse_problem(jobs_file, Some(constraints_file), 123));
+	}
+
+	#[test]
+	fn test_constraints_are_sorted_and_transformed_back() {
+		let mut problem = parse_problem(
+			"./test-problems/infeasible/regression/panic3-cores3.csv",
+			Some("./test-problems/infeasible/regression/panic3.prec.csv"), 3
+		);
+		let old_problem = problem.clone();
+		let permutation = ProblemPermutation::possible(&mut problem).unwrap();
+		assert!(problem.constraints.is_sorted_by_key(|c| c.get_before()));
+		permutation.transform_back(&mut problem);
+
+		assert_eq!(old_problem, problem);
 	}
 }

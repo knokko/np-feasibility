@@ -127,13 +127,16 @@ impl OccupationTimeline {
 				end_index
 			}
 		};
-
 		let start_index = match self.intervals.binary_search_by_key(
 			&job.latest_start, |i| i.start
 		) {
 			Ok(exact_start_index) => exact_start_index,
 			Err(next_start_index) => {
-				let num_cores = self.intervals[next_start_index - 1].num_cores;
+				let num_cores = if next_start_index > 0 {
+					self.intervals[next_start_index - 1].num_cores
+				} else {
+					0
+				};
 				if next_start_index < self.intervals.len() &&
 					num_cores + 1 == self.intervals[next_start_index].num_cores &&
 					self.intervals[next_start_index].start >= job.get_earliest_finish() {
@@ -147,7 +150,6 @@ impl OccupationTimeline {
 				next_start_index
 			}
 		};
-
 		for index in start_index ..= end_index {
 			let more_cores = self.intervals[index].num_cores + 1;
 			if more_cores > self.max_num_cores {
@@ -262,7 +264,9 @@ impl OccupationTimeline {
 
 #[cfg(test)]
 mod tests {
+	use crate::bounds::strengthen_bounds_using_constraints;
 	use crate::parser::parse_problem;
+	use crate::permutation::ProblemPermutation;
 	use super::*;
 
 	#[test]
@@ -849,8 +853,30 @@ mod tests {
 	#[test]
 	fn test_hang_regression() {
 		let mut problem = parse_problem(
-			"./test-problems/infeasible/regression/hang1.csv", None, 2
+			"./test-problems/infeasible/regression/hang1-cores2.csv", None, 2
 		);
+		strengthen_bounds_using_core_occupation(&mut problem);
+	}
+
+	#[test]
+	fn test_panic_regression1() {
+		let mut problem = parse_problem(
+			"./test-problems/infeasible/regression/panic1-cores3.csv",
+			Some("./test-problems/infeasible/regression/panic1.prec.csv"), 3
+		);
+		ProblemPermutation::possible(&mut problem).unwrap();
+		strengthen_bounds_using_constraints(&mut problem);
+		strengthen_bounds_using_core_occupation(&mut problem);
+	}
+
+	#[test]
+	fn test_panic_regression2() {
+		let mut problem = parse_problem(
+			"./test-problems/infeasible/regression/panic2-cores3.csv",
+			Some("./test-problems/infeasible/regression/panic2.prec.csv"), 3
+		);
+		ProblemPermutation::possible(&mut problem).unwrap();
+		strengthen_bounds_using_constraints(&mut problem);
 		strengthen_bounds_using_core_occupation(&mut problem);
 	}
 }
