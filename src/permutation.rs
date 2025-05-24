@@ -16,7 +16,7 @@ impl JobBuilder {
 }
 
 /// Represents a permutation (reordering) of the jobs and constraints of a problem. Sometimes,
-/// sorting/reordering the jobs and constraints makes subsequent analysis steps much simpler.
+/// sorting/reordering the jobs and constraints makes later analysis steps much simpler.
 /// Currently, we always use a **possible** permutation.
 pub struct ProblemPermutation {
 	jobs: Vec<usize>,
