@@ -11,7 +11,7 @@ use clap::Parser;
 use cli::Args;
 use parser::parse_problem;
 use permutation::ProblemPermutation;
-use necessary::run_feasibility_load_test;
+use necessary::*;
 
 fn main() {
 	let args = Args::parse();
@@ -25,7 +25,7 @@ fn main() {
 		strengthen_bounds_using_constraints(&mut problem);
 		strengthen_bounds_using_core_occupation(&mut problem);
 		permutation.transform_back(&mut problem);
-		if problem.is_certainly_infeasible() || run_feasibility_load_test(&problem) {
+		if problem.is_certainly_infeasible() || run_feasibility_load_test(&problem) || run_feasibility_interval_test(&problem) {
 			println!("INFEASIBLE");
 		} else {
 			println!("This problem may or may not be feasible.");

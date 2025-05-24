@@ -197,6 +197,7 @@ pub fn run_feasibility_load_test(problem: &Problem) -> bool {
 #[cfg(test)]
 mod tests {
 	use crate::bounds::*;
+	use crate::necessary::interval::run_feasibility_interval_test;
 	use super::*;
 
 	#[test]
@@ -213,6 +214,7 @@ mod tests {
 		assert_eq!(load_test.maximum_executed_load, 1000);
 
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -234,6 +236,7 @@ mod tests {
 		assert_eq!(load_test.maximum_executed_load, 999);
 
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -285,6 +288,7 @@ mod tests {
 		assert_eq!(load_test.maximum_executed_load, 16);
 
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -311,6 +315,7 @@ mod tests {
 		assert_eq!(load_test.maximum_executed_load, 7);
 
 		assert!(run_feasibility_load_test(&problem));
+		assert!(run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -346,6 +351,7 @@ mod tests {
 		assert_eq!(load_test.maximum_executed_load, 11);
 
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -379,6 +385,9 @@ mod tests {
 		assert_eq!(load_test.current_time, 20);
 		assert_eq!(load_test.minimum_executed_load, 13);
 		assert_eq!(load_test.maximum_executed_load, 13);
+
+		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -412,6 +421,9 @@ mod tests {
 		assert_eq!(load_test.current_time, 30);
 		assert_eq!(load_test.minimum_executed_load, 60);
 		assert_eq!(load_test.maximum_executed_load, 60);
+
+		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -437,6 +449,7 @@ mod tests {
 		};
 
 		assert!(run_feasibility_load_test(&problem));
+		assert!(run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -456,6 +469,7 @@ mod tests {
 		};
 
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 		assert_ne!(OccupationStrengthenResult::Infeasible, strengthen_bounds_using_core_occupation(&mut problem));
 	}
 
@@ -478,6 +492,7 @@ mod tests {
 		};
 
 		assert!(run_feasibility_load_test(&problem));
+		assert!(run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -499,8 +514,7 @@ mod tests {
 			constraints: vec![],
 			num_cores: 1
 		};
-
-		// TODO For the feasibility interval test
+		assert!(run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -519,6 +533,7 @@ mod tests {
 			num_cores: 1
 		};
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 		assert_ne!(OccupationStrengthenResult::Infeasible, strengthen_bounds_using_core_occupation(&mut problem));
 	}
 
@@ -543,6 +558,7 @@ mod tests {
 			num_cores: 1
 		};
 		assert!(run_feasibility_load_test(&problem));
+		assert!(run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -553,8 +569,8 @@ mod tests {
 			num_cores: 1
 		};
 		problem.jobs.push(Job::release_to_deadline(4, 30, 5, 40));
+		assert!(run_feasibility_interval_test(&problem));
 		assert_eq!(OccupationStrengthenResult::Infeasible, strengthen_bounds_using_core_occupation(&mut problem));
-		// TODO Solve with feasibility interval test
 	}
 
 	#[test]
@@ -573,6 +589,7 @@ mod tests {
 			num_cores: 1
 		};
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 		assert_ne!(OccupationStrengthenResult::Infeasible, strengthen_bounds_using_core_occupation(&mut problem));
 	}
 
@@ -593,6 +610,7 @@ mod tests {
 			num_cores: 1
 		};
 		assert!(run_feasibility_load_test(&problem));
+		assert!(run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -614,7 +632,7 @@ mod tests {
 			num_cores: 1
 		};
 		assert_eq!(OccupationStrengthenResult::Infeasible, strengthen_bounds_using_core_occupation(&mut problem));
-		// TODO Use feasibility interval test
+		assert!(run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -631,9 +649,10 @@ mod tests {
 		};
 
 		assert!(!run_feasibility_load_test(&problem));
+		assert!(!run_feasibility_interval_test(&problem));
 		assert_ne!(OccupationStrengthenResult::Infeasible, strengthen_bounds_using_core_occupation(&mut problem));
 		assert!(!run_feasibility_load_test(&problem));
-		// TODO run interval test
+		assert!(!run_feasibility_interval_test(&problem));
 	}
 
 	#[test]
@@ -649,8 +668,7 @@ mod tests {
 			num_cores: 2
 		};
 
-		assert!(!run_feasibility_load_test(&problem));
-		// TODO Interval test should detect this!
+		assert!(run_feasibility_interval_test(&problem));
 		assert_eq!(OccupationStrengthenResult::Infeasible, strengthen_bounds_using_core_occupation(&mut problem));
 	}
 }
