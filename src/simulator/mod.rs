@@ -20,6 +20,12 @@ struct RunningJob {
 	finishes_at: Time,
 }
 
+/// This struct simulates a non-preemptive work-conserving scheduler. Users can invoke the
+/// `schedule(Job)` method to dispatch jobs, and this simulator checks whether a non-preemptive
+/// work-conserving scheduler would miss deadlines if the jobs were dispatched in that order.
+///
+/// This struct also has methods like `predict_start_time(Job)` to predict at what time a job would
+/// start if it were dispatched next, *without* actually scheduling that job.
 #[derive(Clone)]
 pub struct Simulator {
 	finished_jobs: Vec<bool>, // TODO Create IndexSet struct for this
@@ -32,6 +38,9 @@ pub struct Simulator {
 }
 
 impl Simulator {
+
+	/// Constructs a new simulator for the given problem.
+	/// No jobs are dispatched initially.
 	pub fn new(problem: &Problem) -> Self {
 		let (predecessor_mapping, maximum_suspension) = create_predecessor_mapping(problem);
 		Self {
@@ -45,6 +54,8 @@ impl Simulator {
 		}
 	}
 
+	/// Assuming that `job` is the next job that is dispatched, predicts at which time it would
+	/// start executing. This method does **not** schedule `job`: it only provides information.
 	pub fn predict_start_time(&self, job: Job) -> Time {
 		let mut ready_time = job.earliest_start;
 		for constraint in &self.predecessor_mapping[job.get_index()] {
@@ -66,6 +77,9 @@ impl Simulator {
 		Time::max(ready_time, self.core_availability.next_start_time())
 	}
 
+	/// Assuming that `job` is the next job that is dispatched, this method predicts the earliest
+	/// time at or after the start of `job` where at least 1 core is available. The core
+	/// that executes `job` is not counted 'available' at the start time of `job`.
 	pub fn predict_next_start_time(&self, job: Job) -> Time {
 		let current_start_time = self.predict_start_time(job);
 		let mut next_start_time = current_start_time + job.get_execution_time();
@@ -75,17 +89,21 @@ impl Simulator {
 		Time::max(current_start_time, next_start_time)
 	}
 
+	/// Ensures that `job` is the next job that starts. It will start as early as possible. The
+	/// start time can be predicted using `predict_start_time(job)`.
 	pub fn schedule(&mut self, job: Job) {
 		let start_time = self.predict_start_time(job);
 		if start_time > job.latest_start {
 			self.missed_deadline = true;
 		}
 		debug_assert!(start_time >= job.earliest_start);
+		debug_assert!(!self.finished_jobs[job.get_index()]);
 		self.core_availability.schedule(start_time, job.get_execution_time());
 
 		let mut index = 0;
 		while index < self.running_jobs.len() {
 			let running_job = self.running_jobs[index];
+			debug_assert!(running_job.job != job.get_index());
 			if self.core_availability.next_start_time() >= running_job.finishes_at + self.maximum_suspension {
 				debug_assert!(!self.finished_jobs[running_job.job]);
 				self.finished_jobs[running_job.job] = true;
@@ -103,14 +121,18 @@ impl Simulator {
 		})
 	}
 
+	/// Predicts the earliest next time at which at least 1 core is available.
 	pub fn next_core_available(&self) -> Time {
 		self.core_availability.next_start_time()
 	}
 
+	/// Returns true if and only if a deadline miss was encountered, which is if and only if
+	/// a job was `schedule`d after its latest start time.
 	pub fn has_missed_deadline(&self) -> bool {
 		self.missed_deadline
 	}
 
+	/// Returns the number of jobs that have been `schedule`d so far
 	pub fn num_dispatched_jobs(&self) -> usize {
 		self.num_finished_jobs + self.running_jobs.len()
 	}
@@ -210,11 +232,11 @@ mod tests {
 		problem.validate();
 		strengthen_bounds_using_constraints(&mut problem);
 
-		// TODO Figure out how to assert that it panics
-		// TODO and test violating constraints and double-scheduling
+		assert!(std::panic::catch_unwind(|| Simulator::new(&problem).schedule(problem.jobs[1])).is_err());
 
 		let mut bad_simulator = Simulator::new(&problem);
 		bad_simulator.schedule(problem.jobs[2]);
+		assert!(std::panic::catch_unwind(|| bad_simulator.clone().schedule(problem.jobs[2])).is_err());
 		bad_simulator.schedule(problem.jobs[0]);
 		assert!(bad_simulator.has_missed_deadline());
 		assert_eq!(2, bad_simulator.num_dispatched_jobs());
@@ -244,7 +266,8 @@ mod tests {
 		problem.validate();
 		strengthen_bounds_using_constraints(&mut problem);
 
-		// TODO Test violate constraint
+		assert!(std::panic::catch_unwind(|| Simulator::new(&problem).schedule(problem.jobs[1])).is_err());
+
 		let mut bad_simulator = Simulator::new(&problem);
 		bad_simulator.schedule(problem.jobs[0]);
 		bad_simulator.schedule(problem.jobs[2]);
