@@ -5,6 +5,7 @@ mod parser;
 mod permutation;
 mod problem;
 mod simulator;
+mod solver;
 mod sorted_job_iterator;
 
 use bounds::*;
