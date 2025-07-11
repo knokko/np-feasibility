@@ -1,5 +1,9 @@
 use crate::problem::*;
 
+/// This struct can be used to track how many unscheduled predecessors each job has. This is
+/// important for solvers, since only jobs with 0 remaining predecessors can be scheduled next.
+/// 
+/// In particular, this struct is crucial for `HeuristicJobQueue`.
 #[derive(Clone)]
 pub struct PrecedenceTracker {
 	total_predecessors: Vec<usize>,
@@ -34,10 +38,15 @@ impl PrecedenceTracker {
 		Self { total_predecessors, successors, successor_offsets, }
 	}
 
+	/// Returns a copy of the `total_predecessors` vector, which maps every job index `j` to the
+	/// number of predecessors that `j` has.
 	pub fn clone_total_predecessors(&self) -> Vec<usize> {
 		self.total_predecessors.clone()
 	}
 
+	/// Assuming that the `remaining_predecessors` vector maps every job index `j` to the number of
+	/// unscheduled predecessors that `j` has, this method will decrease `remaining_predecessors[j]` by
+	/// 1 for every successor of `finished_job`.
 	pub fn update_remaining_predecessors(
 		&self, finished_job: usize, remaining_predecessors: &mut [usize]
 	) {
